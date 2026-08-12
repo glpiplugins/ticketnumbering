@@ -1,5 +1,7 @@
 # Ticket Numbering (`ticketnumbering`)
 
+*Deutsch · [English](README.en.md)*
+
 GLPI-11-Plugin, das die **Nummer neuer Tickets frei konfigurierbar** macht.
 Statt der durchlaufenden GLPI-Zählung erhalten neue Tickets eine Nummer nach
 einem selbst definierten Muster, z. B. `260800001` für das erste Ticket im
