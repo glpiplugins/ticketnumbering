@@ -1,0 +1,15 @@
+# Dependencies
+/vendor/
+
+# Composer
+composer.lock
+
+# PHPUnit
+/.phpunit.result.cache
+/.phpunit.cache/
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

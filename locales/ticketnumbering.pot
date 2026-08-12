@@ -1,0 +1,234 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-12 05:13+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/Service/NumberPattern.php:229
+msgid "\"{DD}\" may only be used directly after \"{MM}\"."
+msgstr ""
+
+#: src/Service/NumberPattern.php:237
+msgid "A pattern using a date placeholder must start with \"{YY}\" or \"{YYYY}\", otherwise the numbers would repeat every year."
+msgstr ""
+
+#: templates/pages/config.html.twig:93
+msgid "A ticket number is the numeric id of the ticket, so the pattern may only produce digits. Fixed digits are allowed at the beginning, date placeholders must follow from the largest to the smallest unit, and the pattern ends with the \"#\" counter."
+msgstr ""
+
+#: templates/pages/config.html.twig:187
+msgid "Active pattern"
+msgstr ""
+
+#: templates/pages/config.html.twig:238
+msgid "An existing ticket already has a higher id than the start of this block. A ticket id can only ever grow, so this pattern cannot take effect until the counter reaches it."
+msgstr ""
+
+#: templates/pages/config.html.twig:157
+msgid "Click an example to copy it into the pattern field. Nothing is saved until you press Save."
+msgstr ""
+
+#: templates/pages/config.html.twig:198
+msgid "Current block"
+msgstr ""
+
+#: templates/pages/config.html.twig:167
+msgid "Current state"
+msgstr ""
+
+#: src/Service/NumberPattern.php:222
+msgid "Date placeholders must be ordered from the largest to the smallest unit, e.g. {YY}{MM}{DD}."
+msgstr ""
+
+#: templates/pages/config.html.twig:16
+msgid "Define how the number of a newly created ticket is composed."
+msgstr ""
+
+#: templates/pages/config.html.twig:67
+msgid "Example, first ticket of the current period:"
+msgstr ""
+
+#: templates/pages/config.html.twig:130
+msgid "Examples"
+msgstr ""
+
+#: src/Service/NumberPattern.php:199
+msgid "Fixed digits are only allowed at the beginning of the pattern."
+msgstr ""
+
+#: src/Service/NumberPattern.php:436
+msgid "Fixed prefix 1, continuous counter (no reset)"
+msgstr ""
+
+#: src/Service/NumberPattern.php:413
+msgid "Four-digit year (2026)"
+msgstr ""
+
+#: src/Service/NumberPattern.php:432
+msgid "Four-digit year, 99999 tickets per year"
+msgstr ""
+
+#: templates/pages/config.html.twig:209
+msgid "Highest existing ticket id"
+msgstr ""
+
+#: templates/pages/config.html.twig:191
+msgid "Next ticket number"
+msgstr ""
+
+#: templates/pages/config.html.twig:49
+msgid "Number format"
+msgstr ""
+
+#: src/Service/NumberPattern.php:419
+msgid "One digit of the running counter"
+msgstr ""
+
+#: src/Service/NumberPattern.php:213
+msgid "Placeholder \"{%s}\" is used more than once."
+msgstr ""
+
+#: templates/pages/config.html.twig:110
+msgid "Placeholders"
+msgstr ""
+
+#: src/Service/NumberPattern.php:437
+msgid "Plain continuous counter (GLPI default behaviour)"
+msgstr ""
+
+#: templates/pages/config.html.twig:57
+msgid "Plugin numbering active"
+msgstr ""
+
+#: src/Service/NumberPattern.php:415
+msgid "Quarter (1-4)"
+msgstr ""
+
+#: src/Service/NumberPattern.php:187
+msgid "The \"#\" counter must be at the end of the pattern."
+msgstr ""
+
+#: src/Service/NumberPattern.php:181
+msgid "The counter must be between %1$d and %2$d \"#\" long."
+msgstr ""
+
+#: templates/pages/config.html.twig:94
+msgid "The counter restarts whenever the part in front of it changes — with {YY}{MM} that is every month."
+msgstr ""
+
+#: src/Service/NumberPattern.php:247
+msgid "The pattern can produce numbers larger than %s, which a ticket id cannot store. Use fewer digits."
+msgstr ""
+
+#: src/Service/NumberPattern.php:174
+msgid "The pattern must contain a counter, written as one or more \"#\"."
+msgstr ""
+
+#: src/Service/NumberPattern.php:176
+msgid "The pattern must contain exactly one \"#\" counter block."
+msgstr ""
+
+#: templates/pages/config.html.twig:27
+msgid "The pattern was not saved."
+msgstr ""
+
+#: templates/pages/config.html.twig:174
+msgid "The plugin numbering is switched off. New tickets keep GLPI's continuous numbering."
+msgstr ""
+
+#: templates/pages/config.html.twig:181
+msgid "The stored pattern is invalid; the default pattern is used until it is corrected."
+msgstr ""
+
+#: src/Service/NumberPattern.php:88
+msgid "The ticket number pattern must not be empty."
+msgstr ""
+
+#: templates/pages/config.html.twig:231
+msgid "This block is full. The next ticket will get a number outside the pattern. Increase the number of \"#\" digits."
+msgstr ""
+
+#: setup.php:19 src/Controller/ConfigController.php:68 templates/pages/config.html.twig:14
+msgid "Ticket Numbering"
+msgstr ""
+
+#: templates/pages/config.html.twig:75
+msgid "Ticket number pattern"
+msgstr ""
+
+#: src/Controller/ConfigController.php:53
+msgid "Ticket numbering configuration saved."
+msgstr ""
+
+#: templates/pages/config.html.twig:244
+msgid "Tickets that are created with an explicit id — for example by an import — are never renumbered and do not move the counter."
+msgstr ""
+
+#: src/Service/NumberPattern.php:417
+msgid "Two-digit ISO calendar week (32)"
+msgstr ""
+
+#: src/Service/NumberPattern.php:418
+msgid "Two-digit day of month (12)"
+msgstr ""
+
+#: src/Service/NumberPattern.php:416
+msgid "Two-digit month (08)"
+msgstr ""
+
+#: src/Service/NumberPattern.php:414
+msgid "Two-digit year (26)"
+msgstr ""
+
+#: src/Service/NumberPattern.php:433
+msgid "Two-digit year, 99999 tickets per year"
+msgstr ""
+
+#: src/Service/NumberPattern.php:102
+msgid "Unclosed placeholder: a \"{\" has no matching \"}\"."
+msgstr ""
+
+#: src/Service/NumberPattern.php:122
+msgid "Unexpected \"}\" without a matching \"{\"."
+msgstr ""
+
+#: src/Service/NumberPattern.php:109
+msgid "Unknown placeholder \"{%s}\". Supported: %s."
+msgstr ""
+
+#: src/Service/NumberPattern.php:149
+msgid "Unsupported character \"%s\" in the pattern."
+msgstr ""
+
+#: templates/pages/config.html.twig:202
+msgid "Used in this block"
+msgstr ""
+
+#: templates/pages/config.html.twig:61
+msgid "When disabled, GLPI keeps its own continuous ticket numbering."
+msgstr ""
+
+#: src/Service/NumberPattern.php:435
+msgid "Year + month + day, 999 tickets per day"
+msgstr ""
+
+#: src/Service/NumberPattern.php:431
+msgid "Year + month, 99999 tickets per month (default)"
+msgstr ""
+
+#: src/Service/NumberPattern.php:434
+msgid "Year + quarter"
+msgstr ""
