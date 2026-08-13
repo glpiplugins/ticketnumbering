@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ticketnumbering\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-12 05:13+0000\n"
-"PO-Revision-Date: 2026-08-12 05:13+0000\n"
+"POT-Creation-Date: 2026-08-13 20:48+0000\n"
+"PO-Revision-Date: 2026-08-13 20:48+0000\n"
 "Last-Translator: Roy Brannath\n"
 "Language-Team: none\n"
 "Language: en_GB\n"
@@ -16,218 +16,218 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/Service/NumberPattern.php:229
+#: src/Service/NumberPattern.php:238
 msgid "\"{DD}\" may only be used directly after \"{MM}\"."
 msgstr "\"{DD}\" may only be used directly after \"{MM}\"."
 
-#: src/Service/NumberPattern.php:237
+#: templates/pages/config.html.twig:223
+msgid "A number is the numeric id of the item, so the pattern may only produce digits. Fixed digits are allowed at the beginning, date placeholders must follow from the largest to the smallest unit, and the pattern ends with the \"#\" counter."
+msgstr "A number is the numeric id of the item, so the pattern may only produce digits. Fixed digits are allowed at the beginning, date placeholders must follow from the largest to the smallest unit, and the pattern ends with the \"#\" counter."
+
+#: src/Service/NumberPattern.php:246
 msgid "A pattern using a date placeholder must start with \"{YY}\" or \"{YYYY}\", otherwise the numbers would repeat every year."
 msgstr "A pattern using a date placeholder must start with \"{YY}\" or \"{YYYY}\", otherwise the numbers would repeat every year."
 
-#: templates/pages/config.html.twig:93
-msgid "A ticket number is the numeric id of the ticket, so the pattern may only produce digits. Fixed digits are allowed at the beginning, date placeholders must follow from the largest to the smallest unit, and the pattern ends with the \"#\" counter."
-msgstr "A ticket number is the numeric id of the ticket, so the pattern may only produce digits. Fixed digits are allowed at the beginning, date placeholders must follow from the largest to the smallest unit, and the pattern ends with the \"#\" counter."
-
-#: templates/pages/config.html.twig:187
+#: templates/pages/config.html.twig:134
 msgid "Active pattern"
 msgstr "Active pattern"
 
-#: templates/pages/config.html.twig:238
-msgid "An existing ticket already has a higher id than the start of this block. A ticket id can only ever grow, so this pattern cannot take effect until the counter reaches it."
-msgstr "An existing ticket already has a higher id than the start of this block. A ticket id can only ever grow, so this pattern cannot take effect until the counter reaches it."
+#: templates/pages/config.html.twig:197
+msgid "An existing item already has a higher id than the start of this block. An id can only ever grow, so this pattern cannot take effect until the counter reaches it."
+msgstr "An existing item already has a higher id than the start of this block. An id can only ever grow, so this pattern cannot take effect until the counter reaches it."
 
-#: templates/pages/config.html.twig:157
-msgid "Click an example to copy it into the pattern field. Nothing is saved until you press Save."
-msgstr "Click an example to copy it into the pattern field. Nothing is saved until you press Save."
-
-#: templates/pages/config.html.twig:198
+#: templates/pages/config.html.twig:145
 msgid "Current block"
 msgstr "Current block"
 
-#: templates/pages/config.html.twig:167
-msgid "Current state"
-msgstr "Current state"
-
-#: src/Service/NumberPattern.php:222
+#: src/Service/NumberPattern.php:231
 msgid "Date placeholders must be ordered from the largest to the smallest unit, e.g. {YY}{MM}{DD}."
 msgstr "Date placeholders must be ordered from the largest to the smallest unit, e.g. {YY}{MM}{DD}."
 
-#: templates/pages/config.html.twig:16
-msgid "Define how the number of a newly created ticket is composed."
-msgstr "Define how the number of a newly created ticket is composed."
+#: templates/pages/config.html.twig:18
+msgid "Define how the number of a newly created item is composed. Every item type is configured separately."
+msgstr "Define how the number of a newly created item is composed. Every item type is configured separately."
 
-#: templates/pages/config.html.twig:67
-msgid "Example, first ticket of the current period:"
-msgstr "Example, first ticket of the current period:"
+#: templates/pages/config.html.twig:79
+msgid "Example, first number of the current period:"
+msgstr "Example, first number of the current period:"
 
-#: templates/pages/config.html.twig:130
-msgid "Examples"
-msgstr "Examples"
-
-#: src/Service/NumberPattern.php:199
+#: src/Service/NumberPattern.php:208
 msgid "Fixed digits are only allowed at the beginning of the pattern."
 msgstr "Fixed digits are only allowed at the beginning of the pattern."
 
-#: src/Service/NumberPattern.php:436
-msgid "Fixed prefix 1, continuous counter (no reset)"
-msgstr "Fixed prefix 1, continuous counter (no reset)"
-
-#: src/Service/NumberPattern.php:413
+#: src/Service/NumberPattern.php:469
 msgid "Four-digit year (2026)"
 msgstr "Four-digit year (2026)"
 
-#: src/Service/NumberPattern.php:432
-msgid "Four-digit year, 99999 tickets per year"
-msgstr "Four-digit year, 99999 tickets per year"
+#: src/Service/NumberPattern.php:488
+msgid "Four-digit year, 99999 items per year"
+msgstr "Four-digit year, 99999 items per year"
 
-#: templates/pages/config.html.twig:209
-msgid "Highest existing ticket id"
-msgstr "Highest existing ticket id"
+#: templates/pages/config.html.twig:154
+msgid "Highest existing id"
+msgstr "Highest existing id"
 
-#: templates/pages/config.html.twig:191
-msgid "Next ticket number"
-msgstr "Next ticket number"
+#: templates/pages/config.html.twig:48
+msgid "Inactive"
+msgstr "Inactive"
 
-#: templates/pages/config.html.twig:49
-msgid "Number format"
-msgstr "Number format"
+#: templates/pages/config.html.twig:242
+msgid "Items that are created with an explicit id — for example by an import — are never renumbered and do not move the counter."
+msgstr "Items that are created with an explicit id — for example by an import — are never renumbered and do not move the counter."
 
-#: src/Service/NumberPattern.php:419
+#: templates/pages/config.html.twig:138
+msgid "Next number"
+msgstr "Next number"
+
+#: templates/pages/config.html.twig:29
+msgid "Nothing was saved. Correct the pattern marked below and save again."
+msgstr "Nothing was saved. Correct the pattern marked below and save again."
+
+#: templates/pages/config.html.twig:90
+msgid "Number pattern"
+msgstr "Number pattern"
+
+#: src/Service/NumberPattern.php:475
 msgid "One digit of the running counter"
 msgstr "One digit of the running counter"
 
-#: src/Service/NumberPattern.php:213
+#: src/Service/NumberPattern.php:222
 msgid "Placeholder \"{%s}\" is used more than once."
 msgstr "Placeholder \"{%s}\" is used more than once."
 
-#: templates/pages/config.html.twig:110
+#: templates/pages/config.html.twig:218
 msgid "Placeholders"
 msgstr "Placeholders"
 
-#: src/Service/NumberPattern.php:437
+#: src/Service/NumberPattern.php:492
 msgid "Plain continuous counter (GLPI default behaviour)"
 msgstr "Plain continuous counter (GLPI default behaviour)"
 
-#: templates/pages/config.html.twig:57
+#: templates/pages/config.html.twig:69
 msgid "Plugin numbering active"
 msgstr "Plugin numbering active"
 
-#: src/Service/NumberPattern.php:415
+#: src/Service/NumberPattern.php:471
 msgid "Quarter (1-4)"
 msgstr "Quarter (1-4)"
 
-#: src/Service/NumberPattern.php:187
+#: templates/pages/config.html.twig:109
+msgid "Templates:"
+msgstr "Templates:"
+
+#: src/Service/NumberPattern.php:196
 msgid "The \"#\" counter must be at the end of the pattern."
 msgstr "The \"#\" counter must be at the end of the pattern."
 
-#: src/Service/NumberPattern.php:181
+#: src/Service/NumberPattern.php:190
 msgid "The counter must be between %1$d and %2$d \"#\" long."
 msgstr "The counter must be between %1$d and %2$d \"#\" long."
 
-#: templates/pages/config.html.twig:94
+#: templates/pages/config.html.twig:224
 msgid "The counter restarts whenever the part in front of it changes — with {YY}{MM} that is every month."
 msgstr "The counter restarts whenever the part in front of it changes — with {YY}{MM} that is every month."
 
-#: src/Service/NumberPattern.php:247
-msgid "The pattern can produce numbers larger than %s, which a ticket id cannot store. Use fewer digits."
-msgstr "The pattern can produce numbers larger than %s, which a ticket id cannot store. Use fewer digits."
+#: src/Service/NumberPattern.php:265
+msgid "The pattern already produces numbers above the largest possible id (%s). Use fewer digits or a smaller fixed prefix."
+msgstr "The pattern already produces numbers above the largest possible id (%s). Use fewer digits or a smaller fixed prefix."
 
-#: src/Service/NumberPattern.php:174
+#: templates/pages/config.html.twig:183
+msgid "The pattern has outgrown the id column. GLPI continues with its own numbering."
+msgstr "The pattern has outgrown the id column. GLPI continues with its own numbering."
+
+#: src/Service/NumberPattern.php:183
 msgid "The pattern must contain a counter, written as one or more \"#\"."
 msgstr "The pattern must contain a counter, written as one or more \"#\"."
 
-#: src/Service/NumberPattern.php:176
+#: src/Service/NumberPattern.php:185
 msgid "The pattern must contain exactly one \"#\" counter block."
 msgstr "The pattern must contain exactly one \"#\" counter block."
 
-#: templates/pages/config.html.twig:27
-msgid "The pattern was not saved."
-msgstr "The pattern was not saved."
+#: src/Service/NumberPattern.php:97
+msgid "The pattern must not be empty."
+msgstr "The pattern must not be empty."
 
-#: templates/pages/config.html.twig:174
-msgid "The plugin numbering is switched off. New tickets keep GLPI's continuous numbering."
-msgstr "The plugin numbering is switched off. New tickets keep GLPI's continuous numbering."
+#: src/Service/NumberPattern.php:257
+msgid "The pattern produces %1$d digits, but an id holds at most %2$d. Use fewer digits."
+msgstr "The pattern produces %1$d digits, but an id holds at most %2$d. Use fewer digits."
 
-#: templates/pages/config.html.twig:181
+#: templates/pages/config.html.twig:176
 msgid "The stored pattern is invalid; the default pattern is used until it is corrected."
 msgstr "The stored pattern is invalid; the default pattern is used until it is corrected."
 
-#: src/Service/NumberPattern.php:88
-msgid "The ticket number pattern must not be empty."
-msgstr "The ticket number pattern must not be empty."
+#: templates/pages/config.html.twig:190
+msgid "This block is full. The next item will get a number outside the pattern. Increase the number of \"#\" digits."
+msgstr "This block is full. The next item will get a number outside the pattern. Increase the number of \"#\" digits."
 
-#: templates/pages/config.html.twig:231
-msgid "This block is full. The next ticket will get a number outside the pattern. Increase the number of \"#\" digits."
-msgstr "This block is full. The next ticket will get a number outside the pattern. Increase the number of \"#\" digits."
+#: templates/pages/config.html.twig:125
+msgid "This pattern only fits into the id column until %s. After that date GLPI continues with its own numbering."
+msgstr "This pattern only fits into the id column until %s. After that date GLPI continues with its own numbering."
 
-#: setup.php:19 src/Controller/ConfigController.php:68 templates/pages/config.html.twig:14
+#: setup.php:19 src/Controller/ConfigController.php:64 templates/pages/config.html.twig:16
 msgid "Ticket Numbering"
 msgstr "Ticket Numbering"
-
-#: templates/pages/config.html.twig:75
-msgid "Ticket number pattern"
-msgstr "Ticket number pattern"
 
 #: src/Controller/ConfigController.php:53
 msgid "Ticket numbering configuration saved."
 msgstr "Ticket numbering configuration saved."
 
-#: templates/pages/config.html.twig:244
-msgid "Tickets that are created with an explicit id — for example by an import — are never renumbered and do not move the counter."
-msgstr "Tickets that are created with an explicit id — for example by an import — are never renumbered and do not move the counter."
+#: templates/pages/config.html.twig:225
+msgid "Tickets, problems and changes have separate counters, so the same pattern may be used for all of them."
+msgstr "Tickets, problems and changes have separate counters, so the same pattern may be used for all of them."
 
-#: src/Service/NumberPattern.php:417
+#: src/Service/NumberPattern.php:473
 msgid "Two-digit ISO calendar week (32)"
 msgstr "Two-digit ISO calendar week (32)"
 
-#: src/Service/NumberPattern.php:418
+#: src/Service/NumberPattern.php:474
 msgid "Two-digit day of month (12)"
 msgstr "Two-digit day of month (12)"
 
-#: src/Service/NumberPattern.php:416
+#: src/Service/NumberPattern.php:472
 msgid "Two-digit month (08)"
 msgstr "Two-digit month (08)"
 
-#: src/Service/NumberPattern.php:414
+#: src/Service/NumberPattern.php:470
 msgid "Two-digit year (26)"
 msgstr "Two-digit year (26)"
 
-#: src/Service/NumberPattern.php:433
-msgid "Two-digit year, 99999 tickets per year"
-msgstr "Two-digit year, 99999 tickets per year"
-
-#: src/Service/NumberPattern.php:102
+#: src/Service/NumberPattern.php:111
 msgid "Unclosed placeholder: a \"{\" has no matching \"}\"."
 msgstr "Unclosed placeholder: a \"{\" has no matching \"}\"."
 
-#: src/Service/NumberPattern.php:122
+#: src/Service/NumberPattern.php:131
 msgid "Unexpected \"}\" without a matching \"{\"."
 msgstr "Unexpected \"}\" without a matching \"{\"."
 
-#: src/Service/NumberPattern.php:109
+#: src/Service/NumberPattern.php:118
 msgid "Unknown placeholder \"{%s}\". Supported: %s."
 msgstr "Unknown placeholder \"{%s}\". Supported: %s."
 
-#: src/Service/NumberPattern.php:149
+#: src/Service/NumberPattern.php:158
 msgid "Unsupported character \"%s\" in the pattern."
 msgstr "Unsupported character \"%s\" in the pattern."
 
-#: templates/pages/config.html.twig:202
+#: templates/pages/config.html.twig:149
 msgid "Used in this block"
 msgstr "Used in this block"
 
-#: templates/pages/config.html.twig:61
-msgid "When disabled, GLPI keeps its own continuous ticket numbering."
-msgstr "When disabled, GLPI keeps its own continuous ticket numbering."
+#: templates/pages/config.html.twig:73
+msgid "When disabled, GLPI keeps its own continuous numbering for this item type."
+msgstr "When disabled, GLPI keeps its own continuous numbering for this item type."
 
-#: src/Service/NumberPattern.php:435
-msgid "Year + month + day, 999 tickets per day"
-msgstr "Year + month + day, 999 tickets per day"
+#: src/Service/NumberPattern.php:490
+msgid "Year + month + day, 999 items per day"
+msgstr "Year + month + day, 999 items per day"
 
-#: src/Service/NumberPattern.php:431
-msgid "Year + month, 99999 tickets per month (default)"
-msgstr "Year + month, 99999 tickets per month (default)"
+#: src/Service/NumberPattern.php:491
+msgid "Year + month + day, 9999 items per day (10 digits)"
+msgstr "Year + month + day, 9999 items per day (10 digits)"
 
-#: src/Service/NumberPattern.php:434
+#: src/Service/NumberPattern.php:487
+msgid "Year + month, 99999 items per month (default)"
+msgstr "Year + month, 99999 items per month (default)"
+
+#: src/Service/NumberPattern.php:489
 msgid "Year + quarter"
 msgstr "Year + quarter"

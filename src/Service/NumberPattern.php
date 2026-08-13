@@ -37,12 +37,21 @@ namespace GlpiPlugin\Ticketnumbering\Service;
  */
 final class NumberPattern
 {
-    /** Largest value `glpi_tickets`.`id` can hold (MySQL `int unsigned`). */
+    /** Largest value an item id can hold (MySQL `int unsigned`). */
     public const MAX_ID = 4294967295;
+
+    /** Digits of {@see MAX_ID}: a longer pattern can never fit. */
+    public const MAX_DIGITS = 10;
 
     /** Bounds for the `#` counter run. */
     public const MIN_COUNTER_DIGITS = 1;
     public const MAX_COUNTER_DIGITS = 9;
+
+    /**
+     * Horizon for {@see validUntil()}. The two-digit year wraps in 2100, so the
+     * arithmetic is only meaningful within this century anyway.
+     */
+    private const HORIZON_YEAR = 2099;
 
     /**
      * Supported date placeholders.
@@ -85,7 +94,7 @@ final class NumberPattern
         $pattern = self::normalize($pattern);
         if ($pattern === '') {
             throw new InvalidPatternException(
-                __('The ticket number pattern must not be empty.', 'ticketnumbering')
+                __('The pattern must not be empty.', 'ticketnumbering')
             );
         }
 
@@ -241,10 +250,19 @@ final class NumberPattern
         }
 
         if ($errors === []) {
-            $maximum = self::maxRenderedValue($tokens);
-            if ($maximum === null || $maximum > self::MAX_ID) {
+            // An id is at most MAX_DIGITS long, so a longer pattern can never fit.
+            $length = self::renderedLength($tokens);
+            if ($length > self::MAX_DIGITS) {
                 $errors[] = sprintf(
-                    __('The pattern can produce numbers larger than %s, which a ticket id cannot store. Use fewer digits.', 'ticketnumbering'),
+                    __('The pattern produces %1$d digits, but an id holds at most %2$d. Use fewer digits.', 'ticketnumbering'),
+                    $length,
+                    self::MAX_DIGITS
+                );
+            } elseif (self::blockRange($pattern)[1] > self::MAX_ID) {
+                // A pattern of legal length can still start above the column
+                // maximum, e.g. because of a large fixed prefix.
+                $errors[] = sprintf(
+                    __('The pattern already produces numbers above the largest possible id (%s). Use fewer digits or a smaller fixed prefix.', 'ticketnumbering'),
                     (string) self::MAX_ID
                 );
             }
@@ -371,35 +389,73 @@ final class NumberPattern
     }
 
     /**
-     * Largest number the pattern can ever render, or null when it exceeds what an
-     * integer comparison can safely handle.
+     * Number of digits the pattern renders. Every part has a fixed width, so this
+     * is the same for every point in time.
      *
      * @param list<array{type:string,value?:string,name?:string,digits?:int}> $tokens
      */
-    private static function maxRenderedValue(array $tokens): ?int
+    private static function renderedLength(array $tokens): int
     {
-        $maximum = '';
+        $length = 0;
         foreach ($tokens as $token) {
-            $maximum .= match ($token['type']) {
-                'literal'     => (string) $token['value'],
-                'placeholder' => str_pad(
-                    (string) self::PLACEHOLDERS[(string) $token['name']]['max'],
-                    self::PLACEHOLDERS[(string) $token['name']]['len'],
-                    '0',
-                    STR_PAD_LEFT
-                ),
-                'counter'     => str_repeat('9', (int) $token['digits']),
-                default       => '',
+            $length += match ($token['type']) {
+                'literal'     => strlen((string) $token['value']),
+                'placeholder' => self::PLACEHOLDERS[(string) $token['name']]['len'],
+                'counter'     => (int) $token['digits'],
+                default       => 0,
             };
         }
 
-        // Beyond 10 digits the value is certainly out of range; stop before the
-        // string-to-int conversion could overflow.
-        if ($maximum === '' || strlen($maximum) > 10) {
+        return $length;
+    }
+
+    /** Does the whole block of $timestamp still fit into the id column? */
+    private static function fitsAt(string $pattern, int $timestamp): bool
+    {
+        return self::blockRange($pattern, $timestamp)[1] <= self::MAX_ID;
+    }
+
+    /**
+     * Last day on which the pattern still fits into the id column, or null when
+     * it fits for the whole supported horizon (or has no date component at all).
+     *
+     * A ten-digit pattern such as `{YY}{MM}{DD}####` is perfectly usable today but
+     * outgrows `int unsigned` at some point in the future; the configuration page
+     * shows that date instead of rejecting the pattern outright.
+     *
+     * @return int|null timestamp inside the last valid day
+     */
+    public static function validUntil(string $pattern, ?int $from = null): ?int
+    {
+        if (!self::isValid($pattern)) {
             return null;
         }
 
-        return (int) $maximum;
+        $from ??= time();
+        if (self::blockRange($pattern, $from)[0] <= 0) {
+            // Plain counter: no date component, so nothing can grow out of range.
+            return null;
+        }
+
+        $horizon = (int) mktime(12, 0, 0, 12, 31, self::HORIZON_YEAR);
+        if ($horizon <= $from || self::fitsAt($pattern, $horizon)) {
+            return null;
+        }
+
+        // The prefix never decreases over time, so "fits" is true up to a single
+        // switch-over day: binary search for it.
+        $fitting = $from;
+        $failing = $horizon;
+        while ($failing - $fitting > 86400) {
+            $middle = $fitting + intdiv($failing - $fitting, 2);
+            if (self::fitsAt($pattern, $middle)) {
+                $fitting = $middle;
+            } else {
+                $failing = $middle;
+            }
+        }
+
+        return $fitting;
     }
 
     /**
@@ -428,13 +484,12 @@ final class NumberPattern
     public static function presets(): array
     {
         return [
-            '{YY}{MM}#####'   => __('Year + month, 99999 tickets per month (default)', 'ticketnumbering'),
-            '{YYYY}#####'     => __('Four-digit year, 99999 tickets per year', 'ticketnumbering'),
-            '{YY}#####'       => __('Two-digit year, 99999 tickets per year', 'ticketnumbering'),
-            '{YY}{Q}#####'    => __('Year + quarter', 'ticketnumbering'),
-            '{YY}{MM}{DD}###' => __('Year + month + day, 999 tickets per day', 'ticketnumbering'),
-            '1#######'        => __('Fixed prefix 1, continuous counter (no reset)', 'ticketnumbering'),
-            '#########'       => __('Plain continuous counter (GLPI default behaviour)', 'ticketnumbering'),
+            '{YY}{MM}#####'    => __('Year + month, 99999 items per month (default)', 'ticketnumbering'),
+            '{YYYY}#####'      => __('Four-digit year, 99999 items per year', 'ticketnumbering'),
+            '{YY}{Q}#####'     => __('Year + quarter', 'ticketnumbering'),
+            '{YY}{MM}{DD}###'  => __('Year + month + day, 999 items per day', 'ticketnumbering'),
+            '{YY}{MM}{DD}####' => __('Year + month + day, 9999 items per day (10 digits)', 'ticketnumbering'),
+            '#########'        => __('Plain continuous counter (GLPI default behaviour)', 'ticketnumbering'),
         ];
     }
 }

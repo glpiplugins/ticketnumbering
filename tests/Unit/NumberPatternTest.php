@@ -110,6 +110,7 @@ final class NumberPatternTest extends TestCase
         yield 'week'              => ['{YY}{WW}#####'];
         yield 'day'               => ['{YY}{MM}{DD}###'];
         yield 'fixed prefix'      => ['1#######'];
+        yield 'ten digit daily'   => ['{YY}{MM}{DD}####'];
         yield 'plain counter'     => ['#########'];
         yield 'lowercase input'   => ['{yy}{mm}#####'];
         yield 'fixed plus date'   => ['9{YY}{MM}####'];
@@ -143,14 +144,57 @@ final class NumberPatternTest extends TestCase
         yield 'day without month'         => ['{YY}{DD}#####'];
         yield 'too many digits'           => ['{YYYY}{MM}#####'];
         yield 'counter too long'          => ['{YY}##########'];
+        yield 'above the id column'       => ['9{YY}{MM}#####'];
     }
 
-    public function testValueRangeGuardKeepsTheNumberInsideTheIdColumn(): void
+    public function testPatternLongerThanTheIdColumnIsRejected(): void
     {
-        // {YYYY}{MM} + 5 digits would need 11 digits; the id column holds 10.
+        // {YYYY}{MM} + 5 digits needs 11 digits; an id holds at most 10.
         $errors = NumberPattern::validate('{YYYY}{MM}#####');
         self::assertCount(1, $errors);
+        self::assertStringContainsString((string) NumberPattern::MAX_DIGITS, $errors[0]);
+    }
+
+    public function testPatternStartingAboveTheIdColumnIsRejected(): void
+    {
+        // Legal length, but the fixed prefix pushes it past the column maximum.
+        $errors = NumberPattern::validate('9{YY}{MM}#####');
+        self::assertCount(1, $errors);
         self::assertStringContainsString((string) NumberPattern::MAX_ID, $errors[0]);
+    }
+
+    public function testTenDigitDailyPatternIsUsableToday(): void
+    {
+        // The scheme changes are already numbered with in this installation.
+        self::assertSame([], NumberPattern::validate('{YY}{MM}{DD}####'));
+        self::assertSame('2607200001', NumberPattern::example('{YY}{MM}{DD}####', (int) mktime(9, 0, 0, 7, 20, 2026)));
+    }
+
+    public function testValidUntilReportsTheDayATenDigitPatternOutgrowsTheColumn(): void
+    {
+        // {YY}{MM}{DD} + 4 digits fits while YYMMDD * 10000 + 9999 <= 4294967295,
+        // i.e. up to and including 2042-12-31.
+        $validUntil = NumberPattern::validUntil('{YY}{MM}{DD}####', $this->july2026);
+        self::assertNotNull($validUntil);
+        self::assertSame('2042-12-31', date('Y-m-d', $validUntil));
+
+        // The day after really is out of range.
+        self::assertGreaterThan(
+            NumberPattern::MAX_ID,
+            NumberPattern::blockRange('{YY}{MM}{DD}####', (int) mktime(12, 0, 0, 1, 1, 2043))[1]
+        );
+    }
+
+    public function testValidUntilIsOpenEndedForNineDigitAndPlainPatterns(): void
+    {
+        self::assertNull(NumberPattern::validUntil('{YY}{MM}#####', $this->july2026));
+        self::assertNull(NumberPattern::validUntil('{YY}{MM}{DD}###', $this->july2026));
+        self::assertNull(NumberPattern::validUntil('#########', $this->july2026));
+    }
+
+    public function testValidUntilIsOpenEndedForAnInvalidPattern(): void
+    {
+        self::assertNull(NumberPattern::validUntil('AB-###', $this->july2026));
     }
 
     public function testTokenizeThrowsOnUnknownPlaceholder(): void

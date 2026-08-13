@@ -2,22 +2,39 @@
 
 *Deutsch · [English](README.en.md)*
 
-GLPI-11-Plugin, das die **Nummer neuer Tickets frei konfigurierbar** macht.
-Statt der durchlaufenden GLPI-Zählung erhalten neue Tickets eine Nummer nach
-einem selbst definierten Muster, z. B. `260800001` für das erste Ticket im
-August 2026.
+GLPI-11-Plugin, das die **Nummer neuer Tickets, Probleme und Änderungen frei
+konfigurierbar** macht. Statt der durchlaufenden GLPI-Zählung erhalten neue
+Objekte eine Nummer nach einem selbst definierten Muster, z. B. `260800001` für
+das erste Ticket im August 2026.
+
+**Jeder Objekttyp wird getrennt konfiguriert** — eigener Schalter, eigenes
+Muster, eigener Zähler.
 
 - **GLPI-Version:** 11.0.0 – 11.99.99
 - **Lizenz:** GPL-3.0-or-later
 - **Autor:** Roy Brannath
 - **Repository:** https://github.com/glpiplugins/ticketnumbering
 
+## Unterstützte Objekttypen
+
+| Objekttyp    | Tabelle          | Standard        |
+| ------------ | ---------------- | --------------- |
+| Ticket       | `glpi_tickets`   | **aktiv**, `{YY}{MM}#####` |
+| Problem      | `glpi_problems`  | inaktiv         |
+| Änderung     | `glpi_changes`   | inaktiv         |
+
+Probleme und Änderungen sind bewusst ausgeschaltet, bis sie jemand einschaltet —
+ein Update numeriert also nichts um, was vorher unangetastet war. Die drei
+Tabellen haben getrennte Zähler, dasselbe Muster kann daher problemlos für alle
+verwendet werden.
+
 ## Wie es funktioniert
 
-Die Ticketnummer in GLPI **ist** der Primärschlüssel `glpi_tickets.id` — es gibt
-kein separates Nummernfeld. Das Plugin ändert diese ID nicht nachträglich,
-sondern setzt vor dem Anlegen eines Tickets den `AUTO_INCREMENT`-Zähler der
-Tabelle auf den Beginn des passenden Nummernblocks (Hook `pre_item_add`).
+Die Nummer in GLPI **ist** der Primärschlüssel (`glpi_tickets.id`,
+`glpi_problems.id`, `glpi_changes.id`) — es gibt kein separates Nummernfeld. Das
+Plugin ändert diese ID nicht nachträglich, sondern setzt vor dem Anlegen eines
+Objekts den `AUTO_INCREMENT`-Zähler der jeweiligen Tabelle auf den Beginn des
+passenden Nummernblocks (Hook `pre_item_add`).
 
 Ein Muster besteht aus drei Teilen:
 
@@ -29,14 +46,15 @@ Alles links vom Zähler bildet den **Präfix**; er bestimmt den Block. Der Zähl
 läuft innerhalb des Blocks hoch und beginnt automatisch neu, sobald sich der
 Präfix ändert — bei `{YY}{MM}` also zu jedem Monatswechsel.
 
-| Muster            | Erste Nummer (August 2026) | Reset       |
-| ----------------- | -------------------------- | ----------- |
-| `{YY}{MM}#####`   | `260800001`                | monatlich   |
-| `{YYYY}#####`     | `202600001`                | jährlich    |
-| `{YY}{Q}#####`    | `26300001`                 | quartalsweise |
-| `{YY}{MM}{DD}###` | `260812001`                | täglich     |
-| `1#######`        | `10000001`                 | nie         |
-| `#########`       | GLPI-Standardzählung       | nie         |
+| Muster             | Erste Nummer (August 2026) | Reset         |
+| ------------------ | -------------------------- | ------------- |
+| `{YY}{MM}#####`    | `260800001`                | monatlich     |
+| `{YYYY}#####`      | `202600001`                | jährlich      |
+| `{YY}{Q}#####`     | `26300001`                 | quartalsweise |
+| `{YY}{MM}{DD}###`  | `260812001`                | täglich       |
+| `{YY}{MM}{DD}####` | `2608120001`               | täglich       |
+| `1#######`         | `10000001`                 | nie           |
+| `#########`        | GLPI-Standardzählung       | nie           |
 
 ### Platzhalter
 
@@ -65,46 +83,63 @@ lässt daher nur Muster zu, die das garantieren:
 - sobald ein Datums-Platzhalter verwendet wird, muss `{YY}` oder `{YYYY}` am
   Anfang stehen;
 - genau ein `#`-Block, und zwar am Ende (1–9 Stellen);
-- die größtmögliche Nummer muss in `int unsigned` passen (≤ 4294967295), daher
-  ist z. B. `{YYYY}{MM}#####` (11 Stellen) nicht erlaubt.
+- höchstens **10 Stellen** insgesamt, und das Muster darf nicht schon heute über
+  der größtmöglichen ID (4294967295) liegen.
 
 Wird `{WW}` verwendet, rendert das Plugin das Jahr als **ISO-Jahr** (`o`), damit
 der Präfix am Jahreswechsel nicht zurückspringt (der 01.01.2027 liegt in
 KW 53/2026).
+
+### 10-stellige Muster und ihr Ablaufdatum
+
+`int unsigned` fasst maximal 4294967295 — also 10 Stellen, aber nicht jede
+10-stellige Zahl. Ein Muster wie `{YY}{MM}{DD}####` funktioniert deshalb
+einwandfrei, wächst aber irgendwann aus dem Wertebereich heraus (hier am
+01.01.2043). Solche Muster werden **nicht abgelehnt**; die Konfigurationsseite
+zeigt stattdessen an, bis zu welchem Datum das Muster passt. Ab diesem Tag
+numeriert GLPI mit seiner eigenen Zählung weiter und das Plugin protokolliert
+das in `files/_log/ticketnumbering.log`. 9-stellige Muster haben dieses Limit
+nicht.
 
 ## Konfiguration
 
 **Setup → Plugins → Ticket Numbering → Konfigurieren**
 (`/plugins/ticketnumbering/config`)
 
-Die Seite bietet:
+Die Seite zeigt pro Objekttyp eine Karte mit:
 
-- Schalter, ob die Plugin-Nummerierung überhaupt angewendet wird;
-- das Muster mit Live-Vorschau der nächsten Nummer;
-- anklickbare Beispielmuster;
-- den aktuellen Stand: aktives Muster, nächste Ticketnummer, aktueller Block,
-  Verbrauch im Block und die höchste vorhandene Ticket-ID;
-- Warnungen, wenn der Block voll ist oder eine bereits höhere Ticket-ID
-  verhindert, dass das Muster greifen kann.
+- Schalter, ob die Plugin-Nummerierung für diesen Typ angewendet wird;
+- dem Muster mit Live-Vorschau der nächsten Nummer;
+- anklickbaren Vorlagen;
+- dem aktuellen Stand: aktives Muster, nächste Nummer, aktueller Block,
+  Verbrauch im Block und die höchste vorhandene ID;
+- Warnungen, wenn der Block voll ist, das Muster ein Ablaufdatum hat oder eine
+  bereits höhere ID verhindert, dass das Muster greifen kann.
+
+Gespeichert wird **alles oder nichts**: ist ein Muster ungültig, bleibt die
+gesamte Konfiguration unverändert und die betroffene Karte zeigt den Fehler.
 
 Berechtigung: das Kernrecht **Setup → Konfiguration** (`config`) — `READ` zum
 Ansehen, `UPDATE` zum Speichern.
 
-Die Einstellungen liegen in `glpi_configs` im Kontext `plugin:ticketnumbering`
-(Schlüssel `enabled`, `pattern`). Eigene Tabellen legt das Plugin nicht an.
+Die Einstellungen liegen in `glpi_configs` im Kontext `plugin:ticketnumbering`,
+je Objekttyp unter `<objekttyp>_enabled` und `<objekttyp>_pattern` (z. B.
+`ticket_pattern`, `problem_enabled`). Eigene Tabellen legt das Plugin nicht an.
+Eine Konfiguration aus Version 1.1.0 (Schlüssel `enabled`/`pattern`) wird bei der
+Installation automatisch nach `ticket_enabled`/`ticket_pattern` übernommen.
 
 ## Wichtige Hinweise
 
-- **Importe bleiben unangetastet.** Tickets, die mit einer expliziten `id`
+- **Importe bleiben unangetastet.** Objekte, die mit einer expliziten `id`
   angelegt werden (z. B. durch `zammadsync`), werden nicht umnumeriert und
   verschieben den Zähler nicht.
-- **Ein Muster kann nicht rückwärts greifen.** Existiert schon ein Ticket mit
+- **Ein Muster kann nicht rückwärts greifen.** Existiert schon ein Objekt mit
   einer höheren ID als der Blockanfang, kann MySQL den Zähler nicht senken; die
   Konfigurationsseite weist darauf hin.
 - **Voller Block.** Sind alle Nummern eines Blocks verbraucht, vergibt GLPI die
   nächste freie ID außerhalb des Musters. Das Plugin protokolliert das in
   `files/_log/ticketnumbering.log`; mehr `#`-Stellen verhindern es.
-- Bereits vergebene Ticketnummern werden durch eine Änderung des Musters **nicht**
+- Bereits vergebene Nummern werden durch eine Änderung des Musters **nicht**
   verändert.
 
 ## Installation
@@ -116,7 +151,7 @@ docker exec -u www-data glpi-glpi-1 php bin/console plugin:activate ticketnumber
 
 Die Installation ist idempotent und überschreibt eine vorhandene Konfiguration
 nicht. Beim Deinstallieren werden nur die eigenen `glpi_configs`-Zeilen entfernt;
-Tickets bleiben unverändert.
+Tickets, Probleme und Änderungen bleiben unverändert.
 
 ## Entwicklung
 
@@ -134,13 +169,14 @@ docker exec glpi-glpi-1 sh -lc \
 
 ```
 setup.php                              Lifecycle, Hooks, config_page
-hook.php                               pre_item_add für Ticket
-src/Config/Settings.php                Konfiguration in glpi_configs
+hook.php                               pre_item_add für Ticket, Problem, Change
+src/Config/Settings.php                Konfiguration je Objekttyp in glpi_configs
 src/Controller/ConfigController.php    GLPI-11-Controller /plugins/ticketnumbering/config
 src/Service/NumberPattern.php          Muster: Parser, Validierung, Rendering (DB-frei)
-src/Service/TicketNumberer.php         AUTO_INCREMENT setzen, Statusabfrage
+src/Service/ItemNumberer.php           AUTO_INCREMENT setzen, Statusabfrage je Objekttyp
 templates/pages/config.html.twig       Konfigurationsseite
-public/js/config.js                    Live-Vorschau, Beispiel-Buttons
+public/js/config.js                    Live-Vorschau, Vorlagen-Buttons
 tests/Unit/NumberPatternTest.php       Unit-Tests der Musterlogik
+tests/Unit/SettingsKeysTest.php        Unit-Tests der Objekttyp-Schlüssel
 locales/                               de_DE, en_GB
 ```

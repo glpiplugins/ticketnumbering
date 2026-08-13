@@ -4,28 +4,31 @@ declare(strict_types=1);
 
 namespace GlpiPlugin\Ticketnumbering\Service;
 
+use CommonDBTM;
 use GlpiPlugin\Ticketnumbering\Config\Settings;
-use Ticket;
 use Toolbox;
 
 /**
- * Parks the `glpi_tickets` AUTO_INCREMENT counter in the block described by the
- * configured pattern, so a new ticket gets a date-encoded id such as 260800001.
+ * Parks the AUTO_INCREMENT counter of a supported table in the block described by
+ * the itemtype's pattern, so a new item gets a date-encoded id such as 260800001.
  *
- * Imported tickets carry an explicit id and are left untouched, which keeps the
+ * Tickets, problems and changes have their own table and therefore their own
+ * counter; they are configured and handled completely independently.
+ *
+ * Imported items carry an explicit id and are left untouched, which keeps the
  * counter below the date range and prevents it from being dragged upwards.
  *
  * All pattern arithmetic lives in {@see NumberPattern}; this class only holds the
  * database side effects (raising the counter, reading the current state).
  */
-final class TicketNumberer
+final class ItemNumberer
 {
     /**
-     * Ensure the next organic ticket falls into the current block.
+     * Ensure the next organically created item falls into the current block.
      *
-     * @param array<string,mixed> $input the Ticket input about to be inserted
+     * @param array<string,mixed> $input the item input about to be inserted
      */
-    public static function ensureBlockForNewTicket(array $input): void
+    public static function ensureBlockForNewItem(string $itemtype, array $input): void
     {
         global $DB;
 
@@ -34,24 +37,41 @@ final class TicketNumberer
             return;
         }
 
-        if (!Settings::isEnabled()) {
+        if (!Settings::isSupported($itemtype) || !Settings::isEnabled($itemtype)) {
             return;
         }
 
-        [$first, $last] = NumberPattern::blockRange(Settings::pattern());
+        $table = self::tableFor($itemtype);
+        if ($table === null) {
+            return;
+        }
+
+        [$first, $last] = NumberPattern::blockRange(Settings::pattern($itemtype));
         if ($first <= 0) {
             // Plain counter pattern — GLPI's own numbering is what was asked for.
             return;
         }
 
-        $maxInBlock = self::maxIdInRange($first, $last);
+        if ($last > NumberPattern::MAX_ID) {
+            // The pattern has outgrown the id column (a ten-digit pattern does so
+            // eventually). Leave the counter alone rather than write an id the
+            // column cannot store.
+            Toolbox::logInFile(
+                'ticketnumbering',
+                sprintf('%s number block %d..%d exceeds the maximum id %d.', $itemtype, $first, $last, NumberPattern::MAX_ID) . "\n"
+            );
+
+            return;
+        }
+
+        $maxInBlock = self::maxIdInRange($table, $first, $last);
 
         if ($maxInBlock >= $last) {
             // Block exhausted: the next id would spill into the following block.
             // Surface it, but let GLPI proceed.
             Toolbox::logInFile(
                 'ticketnumbering',
-                sprintf('Ticket number block %d..%d is exhausted.', $first, $last) . "\n"
+                sprintf('%s number block %d..%d is exhausted.', $itemtype, $first, $last) . "\n"
             );
 
             return;
@@ -62,18 +82,20 @@ final class TicketNumberer
             return;
         }
 
-        // No ticket in this block yet: park the counter at the block start. This
-        // only ever raises it (the prefix grows monotonically over time), so it is
-        // safe; MySQL clamps to max(id)+1 if that were already higher.
+        // No item in this block yet: park the counter at the block start. This only
+        // ever raises it (the prefix grows monotonically over time), so it is safe;
+        // MySQL clamps to max(id)+1 if that were already higher.
         $DB->doQuery(
-            sprintf('ALTER TABLE `%s` AUTO_INCREMENT = %d', Ticket::getTable(), $first)
+            sprintf('ALTER TABLE `%s` AUTO_INCREMENT = %d', $table, $first)
         );
     }
 
     /**
-     * Current state of the numbering, for the configuration page.
+     * Current state of the numbering of one itemtype, for the configuration page.
      *
      * @return array{
+     *     itemtype:string,
+     *     label:string,
      *     enabled:bool,
      *     pattern:string,
      *     errors:list<string>,
@@ -87,16 +109,20 @@ final class TicketNumberer
      *     next:int,
      *     global_max:int,
      *     exhausted:bool,
-     *     blocked_by_higher_id:bool
+     *     blocked_by_higher_id:bool,
+     *     out_of_range:bool
      * }
      */
-    public static function status(?int $timestamp = null): array
+    public static function status(string $itemtype, ?int $timestamp = null): array
     {
-        $pattern = Settings::storedPattern();
+        $pattern = Settings::storedPattern($itemtype);
         $errors = NumberPattern::validate($pattern);
+        $table = self::tableFor($itemtype);
 
         $status = [
-            'enabled'              => Settings::isEnabled(),
+            'itemtype'             => $itemtype,
+            'label'                => self::labelFor($itemtype),
+            'enabled'              => Settings::isEnabled($itemtype),
             'pattern'              => $pattern,
             'errors'               => $errors,
             'prefix'               => '',
@@ -107,12 +133,13 @@ final class TicketNumberer
             'max_in_block'         => 0,
             'used_in_block'        => 0,
             'next'                 => 0,
-            'global_max'           => self::maxTicketId(),
+            'global_max'           => $table === null ? 0 : self::maxId($table),
             'exhausted'            => false,
             'blocked_by_higher_id' => false,
+            'out_of_range'         => false,
         ];
 
-        if ($errors !== []) {
+        if ($errors !== [] || $table === null) {
             return $status;
         }
 
@@ -131,7 +158,14 @@ final class TicketNumberer
             return $status;
         }
 
-        $maxInBlock = self::maxIdInRange($first, $last);
+        if ($last > NumberPattern::MAX_ID) {
+            $status['out_of_range'] = true;
+            $status['next'] = $status['global_max'] + 1;
+
+            return $status;
+        }
+
+        $maxInBlock = self::maxIdInRange($table, $first, $last);
         $status['max_in_block'] = $maxInBlock;
         $status['used_in_block'] = $maxInBlock >= $first ? $maxInBlock - $first + 1 : 0;
         $status['exhausted'] = $maxInBlock >= $last;
@@ -148,26 +182,48 @@ final class TicketNumberer
         return $status;
     }
 
-    private static function maxIdInRange(int $first, int $last): int
+    /** Translated itemtype name, taken from GLPI core. */
+    public static function labelFor(string $itemtype): string
+    {
+        if (!Settings::isSupported($itemtype) || !is_a($itemtype, CommonDBTM::class, true)) {
+            return $itemtype;
+        }
+
+        return $itemtype::getTypeName(2);
+    }
+
+    /** Table of a supported itemtype, or null when the class is not available. */
+    private static function tableFor(string $itemtype): ?string
+    {
+        if (!Settings::isSupported($itemtype) || !is_a($itemtype, CommonDBTM::class, true)) {
+            return null;
+        }
+
+        $table = $itemtype::getTable();
+
+        return $table !== '' ? $table : null;
+    }
+
+    private static function maxIdInRange(string $table, int $first, int $last): int
     {
         global $DB;
 
         $row = $DB->request([
             'SELECT' => ['MAX' => 'id AS maxid'],
-            'FROM'   => Ticket::getTable(),
+            'FROM'   => $table,
             'WHERE'  => ['AND' => [['id' => ['>=', $first]], ['id' => ['<=', $last]]]],
         ])->current();
 
         return (int) ($row['maxid'] ?? 0);
     }
 
-    private static function maxTicketId(): int
+    private static function maxId(string $table): int
     {
         global $DB;
 
         $row = $DB->request([
             'SELECT' => ['MAX' => 'id AS maxid'],
-            'FROM'   => Ticket::getTable(),
+            'FROM'   => $table,
         ])->current();
 
         return (int) ($row['maxid'] ?? 0);

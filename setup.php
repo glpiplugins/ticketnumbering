@@ -11,7 +11,7 @@ if (!defined('GLPI_ROOT')) {
 
 require_once __DIR__ . '/hook.php';
 
-define('PLUGIN_TICKETNUMBERING_VERSION', '1.1.0');
+define('PLUGIN_TICKETNUMBERING_VERSION', '1.2.0');
 
 function plugin_version_ticketnumbering(): array
 {
@@ -42,13 +42,14 @@ function plugin_init_ticketnumbering(): void
     // which is the route of GlpiPlugin\Ticketnumbering\Controller\ConfigController.
     $PLUGIN_HOOKS['config_page']['ticketnumbering'] = 'config';
 
-    // Before a new ticket is inserted, park the AUTO_INCREMENT counter in the
-    // block described by the configured pattern so organic tickets get a
-    // date-encoded id. Imports that carry an explicit id are left untouched
-    // (see the hook).
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['ticketnumbering'] = [
-        'Ticket' => 'plugin_ticketnumbering_pre_item_add',
-    ];
+    // Before a new item is inserted, park the AUTO_INCREMENT counter of its table
+    // in the block described by that itemtype's own pattern, so organic items get
+    // a date-encoded id. Every itemtype is configured separately and the hook
+    // resolves it from the item itself. Imports that carry an explicit id are left
+    // untouched (see the hook).
+    foreach (Settings::itemtypes() as $itemtype) {
+        $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['ticketnumbering'][$itemtype] = 'plugin_ticketnumbering_pre_item_add';
+    }
 }
 
 function plugin_ticketnumbering_check_prerequisites(): bool

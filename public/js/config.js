@@ -3,23 +3,19 @@
 /**
  * Ticket Numbering — configuration page behaviour.
  *
- * Renders a live preview of the ticket number the entered pattern would produce
- * and lets the example patterns be copied into the input. This is a display aid
- * only: the pattern is validated and applied server-side by
- * GlpiPlugin\Ticketnumbering\Service\NumberPattern, which stays authoritative.
+ * Renders a live preview of the number each entered pattern would produce and
+ * lets the template patterns be copied into the matching input. Every item type
+ * on the page has its own input, preview and template buttons, tied together by
+ * the item type in their data attributes.
+ *
+ * This is a display aid only: the patterns are validated and applied server-side
+ * by GlpiPlugin\Ticketnumbering\Service\NumberPattern, which stays authoritative.
  */
 (() => {
     'use strict';
 
     const form = document.getElementById('ticketnumbering-config-form');
-    const preview = document.getElementById('ticketnumbering-preview');
-
-    if (form === null || preview === null) {
-        return;
-    }
-
-    const input = form.querySelector('input[name="pattern"]');
-    if (input === null) {
+    if (form === null) {
         return;
     }
 
@@ -97,25 +93,42 @@
             index = end + 1;
         }
 
-        return prefix + '1'.padStart(digits, '0');
+        const rendered = prefix + '1'.padStart(digits, '0');
+
+        // An id is an unsigned 32 bit integer; longer numbers cannot be stored.
+        return rendered.length > 10 || Number(rendered) > 4294967295 ? null : rendered;
     };
 
-    const update = () => {
+    const update = (itemtype) => {
+        const input = form.querySelector('input[data-tn-pattern="' + itemtype + '"]');
+        const preview = form.querySelector('[data-tn-preview="' + itemtype + '"]');
+        if (input === null || preview === null) {
+            return;
+        }
+
         const rendered = renderPattern(input.value);
         preview.textContent = rendered === null ? '—' : rendered;
         preview.classList.toggle('bg-red-lt', rendered === null);
         preview.classList.toggle('bg-blue-lt', rendered !== null);
     };
 
-    input.addEventListener('input', update);
+    form.querySelectorAll('input[data-tn-pattern]').forEach((input) => {
+        const itemtype = input.dataset.tnPattern;
+        input.addEventListener('input', () => update(itemtype));
+        update(itemtype);
+    });
 
-    form.ownerDocument.querySelectorAll('.ticketnumbering-preset').forEach((button) => {
+    form.querySelectorAll('.ticketnumbering-preset').forEach((button) => {
         button.addEventListener('click', () => {
-            input.value = button.dataset.pattern || '';
-            update();
+            const itemtype = button.dataset.tnTarget;
+            const input = form.querySelector('input[data-tn-pattern="' + itemtype + '"]');
+            if (input === null) {
+                return;
+            }
+
+            input.value = button.dataset.tnValue || '';
+            update(itemtype);
             input.focus();
         });
     });
-
-    update();
 })();

@@ -2,6 +2,8 @@
 
 {% import 'components/form/fields_macros.html.twig' as fields %}
 
+{% set icons = {'Ticket': 'ti-ticket', 'Problem': 'ti-alert-circle', 'Change': 'ti-refresh'} %}
+
 <div class="asset mb-3">
     <div class="page-header d-print-none mb-3">
         <div class="row align-items-center g-3">
@@ -13,7 +15,7 @@
                     <div>
                         <h2 class="page-title">{{ __('Ticket Numbering', 'ticketnumbering') }}</h2>
                         <div class="text-secondary">
-                            {{ __('Define how the number of a newly created ticket is composed.', 'ticketnumbering') }}
+                            {{ __('Define how the number of a newly created item is composed. Every item type is configured separately.', 'ticketnumbering') }}
                         </div>
                     </div>
                 </div>
@@ -21,230 +23,223 @@
         </div>
     </div>
 
-    {% if errors is not empty %}
+    {% if has_errors %}
         <div class="alert alert-danger" role="alert">
-            <h4 class="alert-title">
-                <i class="ti ti-alert-triangle me-1"></i>{{ __('The pattern was not saved.', 'ticketnumbering') }}
-            </h4>
-            <ul class="mb-0">
-                {% for error in errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
+            <i class="ti ti-alert-triangle me-1"></i>
+            {{ __('Nothing was saved. Correct the pattern marked below and save again.', 'ticketnumbering') }}
         </div>
     {% endif %}
 
-    <div class="row">
-        <div class="col-12 col-xl-7">
-            <form
-                method="post"
-                action="{{ path('/plugins/ticketnumbering/config') }}"
-                id="ticketnumbering-config-form"
-            >
-                {{ fields.csrfField() }}
+    <form
+        method="post"
+        action="{{ path('/plugins/ticketnumbering/config') }}"
+        id="ticketnumbering-config-form"
+    >
+        {{ fields.csrfField() }}
 
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h3 class="card-title mb-0">
-                            <i class="ti ti-adjustments me-2 text-secondary"></i>{{ __('Number format', 'ticketnumbering') }}
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            {{ fields.dropdownYesNo(
-                                'enabled',
-                                enabled ? 1 : 0,
-                                __('Plugin numbering active', 'ticketnumbering'),
-                                {
-                                    'full_width': true,
-                                    'disabled': not can_update,
-                                    'helper': __('When disabled, GLPI keeps its own continuous ticket numbering.', 'ticketnumbering')
-                                }
-                            ) }}
-
-                            {% set pattern_hint %}
-                                <div class="form-hint mt-1">
-                                    {{ __('Example, first ticket of the current period:', 'ticketnumbering') }}
-                                    <span class="badge bg-blue-lt font-monospace" id="ticketnumbering-preview">{{ preview }}</span>
-                                </div>
-                            {% endset %}
-
-                            {{ fields.textField(
-                                'pattern',
-                                pattern,
-                                __('Ticket number pattern', 'ticketnumbering'),
-                                {
-                                    'full_width': true,
-                                    'required': true,
-                                    'readonly': not can_update,
-                                    'add_field_html': pattern_hint,
-                                    'input_addclass': 'font-monospace',
-                                    'additional_attributes': {
-                                        'placeholder': default_pattern,
-                                        'autocomplete': 'off',
-                                        'spellcheck': 'false'
-                                    }
-                                }
-                            ) }}
-                        </div>
-
-                        <div class="alert alert-info mt-2 mb-0" role="alert">
-                            <i class="ti ti-info-circle me-1"></i>
-                            {{ __('A ticket number is the numeric id of the ticket, so the pattern may only produce digits. Fixed digits are allowed at the beginning, date placeholders must follow from the largest to the smallest unit, and the pattern ends with the "#" counter.', 'ticketnumbering') }}
-                            {{ __('The counter restarts whenever the part in front of it changes — with {YY}{MM} that is every month.', 'ticketnumbering') }}
-                        </div>
-                    </div>
-                    {% if can_update %}
-                        <div class="card-footer text-end">
-                            <button type="submit" class="btn btn-primary" id="ticketnumbering-save">
-                                <i class="ti ti-device-floppy me-1"></i>{{ __('Save') }}
-                            </button>
-                        </div>
+        {% for section in sections %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        <i class="ti {{ icons[section.itemtype]|default('ti-hash') }} me-2 text-secondary"></i>{{ section.label }}
+                    </h3>
+                    {% if not section.enabled %}
+                        <span class="card-subtitle ms-auto badge bg-secondary-lt">
+                            {{ __('Inactive', 'ticketnumbering') }}
+                        </span>
                     {% endif %}
-                </div>
-            </form>
-
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">
-                        <i class="ti ti-braces me-2 text-secondary"></i>{{ __('Placeholders', 'ticketnumbering') }}
-                    </h3>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-vcenter card-table">
-                        <tbody>
-                            {% for token, description in placeholders %}
-                                <tr>
-                                    <td class="w-25 font-monospace">{{ token }}</td>
-                                    <td class="text-secondary">{{ description }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">
-                        <i class="ti ti-list-check me-2 text-secondary"></i>{{ __('Examples', 'ticketnumbering') }}
-                    </h3>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-vcenter card-table">
-                        <tbody>
-                            {% for preset, description in presets %}
-                                <tr>
-                                    <td class="w-25">
-                                        {% if can_update %}
-                                            <button
-                                                type="button"
-                                                class="btn btn-sm btn-secondary font-monospace ticketnumbering-preset"
-                                                data-pattern="{{ preset }}"
-                                            >{{ preset }}</button>
-                                        {% else %}
-                                            <span class="font-monospace">{{ preset }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-secondary">{{ description }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% if can_update %}
-                    <div class="card-footer text-secondary">
-                        {{ __('Click an example to copy it into the pattern field. Nothing is saved until you press Save.', 'ticketnumbering') }}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="col-12 col-xl-5">
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">
-                        <i class="ti ti-activity me-2 text-secondary"></i>{{ __('Current state', 'ticketnumbering') }}
-                    </h3>
                 </div>
                 <div class="card-body">
-                    {% if not status.enabled %}
-                        <div class="alert alert-secondary" role="alert">
-                            <i class="ti ti-player-pause me-1"></i>
-                            {{ __('The plugin numbering is switched off. New tickets keep GLPI\'s continuous numbering.', 'ticketnumbering') }}
-                        </div>
-                    {% endif %}
-
-                    {% if status.errors is not empty %}
+                    {% if section.errors is not empty %}
                         <div class="alert alert-danger" role="alert">
-                            <i class="ti ti-alert-triangle me-1"></i>
-                            {{ __('The stored pattern is invalid; the default pattern is used until it is corrected.', 'ticketnumbering') }}
+                            <ul class="mb-0">
+                                {% for error in section.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
                         </div>
                     {% endif %}
 
-                    <div class="datagrid">
-                        <div class="datagrid-item">
-                            <div class="datagrid-title">{{ __('Active pattern', 'ticketnumbering') }}</div>
-                            <div class="datagrid-content font-monospace">{{ status.pattern }}</div>
-                        </div>
-                        <div class="datagrid-item">
-                            <div class="datagrid-title">{{ __('Next ticket number', 'ticketnumbering') }}</div>
-                            <div class="datagrid-content">
-                                <span class="badge bg-blue-lt font-monospace fs-3">{{ status.next }}</span>
+                    <div class="row">
+                        <div class="col-12 col-xl-7">
+                            <div class="row">
+                                {{ fields.dropdownYesNo(
+                                    section.enabled_key,
+                                    section.enabled ? 1 : 0,
+                                    __('Plugin numbering active', 'ticketnumbering'),
+                                    {
+                                        'full_width': true,
+                                        'disabled': not can_update,
+                                        'helper': __('When disabled, GLPI keeps its own continuous numbering for this item type.', 'ticketnumbering')
+                                    }
+                                ) }}
+
+                                {% set pattern_hint %}
+                                    <div class="form-hint mt-1">
+                                        {{ __('Example, first number of the current period:', 'ticketnumbering') }}
+                                        <span
+                                            class="badge bg-blue-lt font-monospace"
+                                            data-tn-preview="{{ section.itemtype }}"
+                                        >{{ section.preview }}</span>
+                                    </div>
+                                {% endset %}
+
+                                {{ fields.textField(
+                                    section.pattern_key,
+                                    section.pattern,
+                                    __('Number pattern', 'ticketnumbering'),
+                                    {
+                                        'full_width': true,
+                                        'required': true,
+                                        'readonly': not can_update,
+                                        'add_field_html': pattern_hint,
+                                        'input_addclass': 'font-monospace',
+                                        'additional_attributes': {
+                                            'placeholder': default_pattern,
+                                            'autocomplete': 'off',
+                                            'spellcheck': 'false',
+                                            'data-tn-pattern': section.itemtype
+                                        }
+                                    }
+                                ) }}
                             </div>
+
+                            {% if can_update %}
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                                    <span class="text-secondary">{{ __('Templates:', 'ticketnumbering') }}</span>
+                                    {% for preset, description in presets %}
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-secondary font-monospace ticketnumbering-preset"
+                                            data-tn-target="{{ section.itemtype }}"
+                                            data-tn-value="{{ preset }}"
+                                            title="{{ description }}"
+                                        >{{ preset }}</button>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            {% if section.valid_until is not empty %}
+                                <div class="alert alert-warning mt-3 mb-0" role="alert">
+                                    <i class="ti ti-clock-exclamation me-1"></i>
+                                    {{ __('This pattern only fits into the id column until %s. After that date GLPI continues with its own numbering.', 'ticketnumbering')|format(section.valid_until) }}
+                                </div>
+                            {% endif %}
                         </div>
-                        {% if status.first > 0 %}
-                            <div class="datagrid-item">
-                                <div class="datagrid-title">{{ __('Current block', 'ticketnumbering') }}</div>
-                                <div class="datagrid-content font-monospace">{{ status.first }} – {{ status.last }}</div>
-                            </div>
-                            <div class="datagrid-item">
-                                <div class="datagrid-title">{{ __('Used in this block', 'ticketnumbering') }}</div>
-                                <div class="datagrid-content">
-                                    {{ status.used_in_block }} / {{ status.block_size - 1 }}
+
+                        <div class="col-12 col-xl-5">
+                            {% set status = section.status %}
+                            <div class="datagrid">
+                                <div class="datagrid-item">
+                                    <div class="datagrid-title">{{ __('Active pattern', 'ticketnumbering') }}</div>
+                                    <div class="datagrid-content font-monospace">{{ status.pattern }}</div>
+                                </div>
+                                <div class="datagrid-item">
+                                    <div class="datagrid-title">{{ __('Next number', 'ticketnumbering') }}</div>
+                                    <div class="datagrid-content">
+                                        <span class="badge bg-blue-lt font-monospace fs-3">{{ status.next }}</span>
+                                    </div>
+                                </div>
+                                {% if status.first > 0 and not status.out_of_range %}
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">{{ __('Current block', 'ticketnumbering') }}</div>
+                                        <div class="datagrid-content font-monospace">{{ status.first }} – {{ status.last }}</div>
+                                    </div>
+                                    <div class="datagrid-item">
+                                        <div class="datagrid-title">{{ __('Used in this block', 'ticketnumbering') }}</div>
+                                        <div class="datagrid-content">{{ status.used_in_block }} / {{ status.block_size - 1 }}</div>
+                                    </div>
+                                {% endif %}
+                                <div class="datagrid-item">
+                                    <div class="datagrid-title">{{ __('Highest existing id', 'ticketnumbering') }}</div>
+                                    <div class="datagrid-content font-monospace">{{ status.global_max }}</div>
                                 </div>
                             </div>
-                        {% endif %}
-                        <div class="datagrid-item">
-                            <div class="datagrid-title">{{ __('Highest existing ticket id', 'ticketnumbering') }}</div>
-                            <div class="datagrid-content font-monospace">{{ status.global_max }}</div>
-                        </div>
-                    </div>
 
-                    {% if status.first > 0 %}
-                        {% set usage = status.block_size > 1 ? (status.used_in_block * 100 / (status.block_size - 1)) : 0 %}
-                        <div class="progress progress-sm mt-3">
-                            <div
-                                class="progress-bar {{ status.exhausted ? 'bg-danger' : 'bg-blue' }}"
-                                style="width: {{ max(usage, 1)|round }}%"
-                                role="progressbar"
-                                aria-valuenow="{{ usage|round }}"
-                                aria-valuemin="0"
-                                aria-valuemax="100"
-                            ></div>
-                        </div>
-                    {% endif %}
+                            {% if status.first > 0 and not status.out_of_range %}
+                                {% set usage = status.block_size > 1 ? (status.used_in_block * 100 / (status.block_size - 1)) : 0 %}
+                                <div class="progress progress-sm mt-3">
+                                    <div
+                                        class="progress-bar {{ status.exhausted ? 'bg-danger' : 'bg-blue' }}"
+                                        style="width: {{ max(usage, 1)|round }}%"
+                                        role="progressbar"
+                                        aria-valuenow="{{ usage|round }}"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                    ></div>
+                                </div>
+                            {% endif %}
 
-                    {% if status.exhausted %}
-                        <div class="alert alert-danger mt-3" role="alert">
-                            <i class="ti ti-alert-triangle me-1"></i>
-                            {{ __('This block is full. The next ticket will get a number outside the pattern. Increase the number of "#" digits.', 'ticketnumbering') }}
-                        </div>
-                    {% endif %}
+                            {% if status.errors is not empty %}
+                                <div class="alert alert-danger mt-3" role="alert">
+                                    <i class="ti ti-alert-triangle me-1"></i>
+                                    {{ __('The stored pattern is invalid; the default pattern is used until it is corrected.', 'ticketnumbering') }}
+                                </div>
+                            {% endif %}
 
-                    {% if status.blocked_by_higher_id %}
-                        <div class="alert alert-warning mt-3" role="alert">
-                            <i class="ti ti-alert-triangle me-1"></i>
-                            {{ __('An existing ticket already has a higher id than the start of this block. A ticket id can only ever grow, so this pattern cannot take effect until the counter reaches it.', 'ticketnumbering') }}
-                        </div>
-                    {% endif %}
+                            {% if status.out_of_range %}
+                                <div class="alert alert-danger mt-3" role="alert">
+                                    <i class="ti ti-alert-triangle me-1"></i>
+                                    {{ __('The pattern has outgrown the id column. GLPI continues with its own numbering.', 'ticketnumbering') }}
+                                </div>
+                            {% endif %}
 
-                    <div class="text-secondary mt-3">
-                        <i class="ti ti-info-circle me-1"></i>
-                        {{ __('Tickets that are created with an explicit id — for example by an import — are never renumbered and do not move the counter.', 'ticketnumbering') }}
+                            {% if status.exhausted %}
+                                <div class="alert alert-danger mt-3" role="alert">
+                                    <i class="ti ti-alert-triangle me-1"></i>
+                                    {{ __('This block is full. The next item will get a number outside the pattern. Increase the number of "#" digits.', 'ticketnumbering') }}
+                                </div>
+                            {% endif %}
+
+                            {% if status.blocked_by_higher_id %}
+                                <div class="alert alert-warning mt-3" role="alert">
+                                    <i class="ti ti-alert-triangle me-1"></i>
+                                    {{ __('An existing item already has a higher id than the start of this block. An id can only ever grow, so this pattern cannot take effect until the counter reaches it.', 'ticketnumbering') }}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
+        {% endfor %}
+
+        {% if can_update %}
+            <div class="text-end mb-3">
+                <button type="submit" class="btn btn-primary" id="ticketnumbering-save">
+                    <i class="ti ti-device-floppy me-1"></i>{{ __('Save') }}
+                </button>
+            </div>
+        {% endif %}
+    </form>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="ti ti-braces me-2 text-secondary"></i>{{ __('Placeholders', 'ticketnumbering') }}
+            </h3>
+        </div>
+        <div class="card-body pb-0">
+            <p class="text-secondary">
+                {{ __('A number is the numeric id of the item, so the pattern may only produce digits. Fixed digits are allowed at the beginning, date placeholders must follow from the largest to the smallest unit, and the pattern ends with the "#" counter.', 'ticketnumbering') }}
+                {{ __('The counter restarts whenever the part in front of it changes — with {YY}{MM} that is every month.', 'ticketnumbering') }}
+                {{ __('Tickets, problems and changes have separate counters, so the same pattern may be used for all of them.', 'ticketnumbering') }}
+            </p>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <tbody>
+                    {% for token, description in placeholders %}
+                        <tr>
+                            <td class="w-25 font-monospace">{{ token }}</td>
+                            <td class="text-secondary">{{ description }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer text-secondary">
+            <i class="ti ti-info-circle me-1"></i>
+            {{ __('Items that are created with an explicit id — for example by an import — are never renumbered and do not move the counter.', 'ticketnumbering') }}
         </div>
     </div>
 </div>
