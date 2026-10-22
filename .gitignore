@@ -13,3 +13,6 @@ composer.lock
 .vscode/
 *.swp
 .DS_Store
+
+# Release archives (tools/build-release.sh)
+/build/

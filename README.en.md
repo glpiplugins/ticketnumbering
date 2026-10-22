@@ -171,6 +171,9 @@ docker run --rm --entrypoint php -u "$(id -u):$(id -g)" \
 
 # Translations (needs gettext)
 cd locales && msgfmt -o de_DE.mo de_DE.po && msgfmt -o en_GB.mo en_GB.po
+
+# Release archive build/ticketnumbering-<version>.tar.gz with checksum
+tools/build-release.sh
 ```
 
 ## Layout
@@ -186,5 +189,6 @@ templates/pages/config.html.twig       configuration page
 public/js/config.js                    live preview, template buttons
 tests/Unit/NumberPatternTest.php       unit tests of the pattern logic
 tests/Unit/SettingsKeysTest.php        unit tests of the item type keys
+tools/build-release.sh                 builds the release archive
 locales/                               de_DE, en_GB
 ```
