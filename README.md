@@ -2,7 +2,7 @@
 
 *Deutsch · [English](README.en.md)*
 
-GLPI-11-Plugin, das die **Nummer neuer Tickets, Probleme und Änderungen frei
+GLPI-12-Plugin, das die **Nummer neuer Tickets, Probleme und Änderungen frei
 konfigurierbar** macht. Statt der durchlaufenden GLPI-Zählung erhalten neue
 Objekte eine Nummer nach einem selbst definierten Muster, z. B. `260800001` für
 das erste Ticket im August 2026.
@@ -10,7 +10,7 @@ das erste Ticket im August 2026.
 **Jeder Objekttyp wird getrennt konfiguriert** — eigener Schalter, eigenes
 Muster, eigener Zähler.
 
-- **GLPI-Version:** 11.0.0 – 11.99.99
+- **GLPI-Version:** 12.0.0 – 12.0.99 (für GLPI 11 bleibt Version 1.2.0)
 - **Lizenz:** GPL-3.0-or-later
 - **Autor:** Roy Brannath
 - **Repository:** https://github.com/glpiplugins/ticketnumbering
@@ -35,6 +35,12 @@ Die Nummer in GLPI **ist** der Primärschlüssel (`glpi_tickets.id`,
 Plugin ändert diese ID nicht nachträglich, sondern setzt vor dem Anlegen eines
 Objekts den `AUTO_INCREMENT`-Zähler der jeweiligen Tabelle auf den Beginn des
 passenden Nummernblocks (Hook `pre_item_add`).
+
+Läuft das Anlegen in einer Datenbank-Transaktion, z. B. bei einem Ticket aus
+einem GLPI-Formular, lehnt GLPI 12 das `ALTER TABLE` ab, weil es die Transaktion
+vorzeitig festschreiben würde. Das erste Objekt eines neuen Blocks bekommt dann
+den Blockanfang als feste ID, und MySQL zieht den Zähler selbst nach. Das
+Ergebnis ist dasselbe.
 
 Ein Muster besteht aus drei Teilen:
 
@@ -136,6 +142,10 @@ Installation automatisch nach `ticket_enabled`/`ticket_pattern` übernommen.
 - **Ein Muster kann nicht rückwärts greifen.** Existiert schon ein Objekt mit
   einer höheren ID als der Blockanfang, kann MySQL den Zähler nicht senken; die
   Konfigurationsseite weist darauf hin.
+- **Gleichzeitiger Blockbeginn in Transaktionen.** Legen zwei Formulare im
+  selben Moment das erste Objekt eines neuen Blocks an, kann eines davon an der
+  doppelten ID scheitern und muss erneut abgeschickt werden. Außerhalb von
+  Transaktionen (Oberfläche, E-Mail-Abholung) kann das nicht passieren.
 - **Voller Block.** Sind alle Nummern eines Blocks verbraucht, vergibt GLPI die
   nächste freie ID außerhalb des Musters. Das Plugin protokolliert das in
   `files/_log/ticketnumbering.log`; mehr `#`-Stellen verhindern es.
@@ -145,24 +155,27 @@ Installation automatisch nach `ticket_enabled`/`ticket_pattern` übernommen.
 ## Installation
 
 ```bash
-docker exec -u www-data glpi-glpi-1 php bin/console plugin:install ticketnumbering
-docker exec -u www-data glpi-glpi-1 php bin/console plugin:activate ticketnumbering
+docker exec -u www-data glpi-app php bin/console plugin:install ticketnumbering
+docker exec -u www-data glpi-app php bin/console plugin:activate ticketnumbering
 ```
 
-Die Installation ist idempotent und überschreibt eine vorhandene Konfiguration
+Aktivieren und Deaktivieren leeren die GLPI-Caches, damit die Route der
+Konfigurationsseite sofort erreichbar ist. Die Installation ist idempotent und überschreibt eine vorhandene Konfiguration
 nicht. Beim Deinstallieren werden nur die eigenen `glpi_configs`-Zeilen entfernt;
 Tickets, Probleme und Änderungen bleiben unverändert.
 
 ## Entwicklung
 
 ```bash
-# Unit-Tests (reine Musterlogik, ohne DB)
-docker exec -u www-data glpi-glpi-1 sh -lc \
-  'cd /var/www/glpi/plugins/ticketnumbering && php ../glpi-core/vendor/bin/phpunit -c phpunit.xml.dist'
+# Unit-Tests (reine Musterlogik, ohne DB) unter PHP 8.5 im GLPI-12-Image;
+# PHPUnit kommt aus einem GLPI-Checkout mit Dev-Abhängigkeiten (GLPI_CORE_DIR)
+docker run --rm --entrypoint php -u "$(id -u):$(id -g)" \
+  -v "$GLPI_CORE_DIR":/plugins/glpi-core:ro -v "$PWD":/plugins/ticketnumbering:ro \
+  -w /plugins/ticketnumbering glpi/glpi:12.0.0 \
+  /plugins/glpi-core/vendor/bin/phpunit -c phpunit.xml.dist --do-not-cache-result
 
-# Übersetzungen
-docker exec glpi-glpi-1 sh -lc \
-  'cd /var/www/glpi/plugins/ticketnumbering/locales && msgfmt -o de_DE.mo de_DE.po && msgfmt -o en_GB.mo en_GB.po'
+# Übersetzungen (braucht gettext)
+cd locales && msgfmt -o de_DE.mo de_DE.po && msgfmt -o en_GB.mo en_GB.po
 ```
 
 ## Aufbau
@@ -171,9 +184,9 @@ docker exec glpi-glpi-1 sh -lc \
 setup.php                              Lifecycle, Hooks, config_page
 hook.php                               pre_item_add für Ticket, Problem, Change
 src/Config/Settings.php                Konfiguration je Objekttyp in glpi_configs
-src/Controller/ConfigController.php    GLPI-11-Controller /plugins/ticketnumbering/config
+src/Controller/ConfigController.php    GLPI-12-Controller /plugins/ticketnumbering/config
 src/Service/NumberPattern.php          Muster: Parser, Validierung, Rendering (DB-frei)
-src/Service/ItemNumberer.php           AUTO_INCREMENT setzen, Statusabfrage je Objekttyp
+src/Service/ItemNumberer.php           Block öffnen (AUTO_INCREMENT/feste ID), Status je Objekttyp
 templates/pages/config.html.twig       Konfigurationsseite
 public/js/config.js                    Live-Vorschau, Vorlagen-Buttons
 tests/Unit/NumberPatternTest.php       Unit-Tests der Musterlogik

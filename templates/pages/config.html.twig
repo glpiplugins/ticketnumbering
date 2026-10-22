@@ -35,8 +35,6 @@
         action="{{ path('/plugins/ticketnumbering/config') }}"
         id="ticketnumbering-config-form"
     >
-        {{ fields.csrfField() }}
-
         {% for section in sections %}
             <div class="card mb-3">
                 <div class="card-header">
@@ -244,6 +242,6 @@
     </div>
 </div>
 
-<script src="{{ path('/plugins/ticketnumbering/public/js/config.js') }}"></script>
+<script src="{{ path('/plugins/ticketnumbering/js/config.js') }}"></script>
 
 {{ call('Html::footer') }}

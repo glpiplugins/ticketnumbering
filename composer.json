@@ -1,6 +1,6 @@
 {
   "name": "glpi/ticketnumbering",
-  "description": "Freely configurable, date-encoded ticket numbers for GLPI 11.",
+  "description": "Freely configurable, date-encoded ticket numbers for GLPI 12.",
   "type": "glpi-plugin",
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/glpiplugins/ticketnumbering",

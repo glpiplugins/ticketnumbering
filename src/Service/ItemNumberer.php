@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace GlpiPlugin\Ticketnumbering\Service;
 
 use CommonDBTM;
+use Glpi\Exception\Database\QueryException;
 use GlpiPlugin\Ticketnumbering\Config\Settings;
+use RuntimeException;
 use Toolbox;
 
 /**
@@ -26,30 +28,38 @@ final class ItemNumberer
     /**
      * Ensure the next organically created item falls into the current block.
      *
+     * A block is normally opened by raising the table's AUTO_INCREMENT counter,
+     * which stays correct when several items are created at the same time. GLPI 12
+     * refuses that DDL statement inside a transaction (an item created from a form
+     * answer, for example), because it would commit the transaction implicitly.
+     * There the first item of the block gets the block start as explicit id
+     * instead; InnoDB then moves the counter behind it on its own.
+     *
      * @param array<string,mixed> $input the item input about to be inserted
+     * @return int|null id to force on the new item, or null to let the counter decide
      */
-    public static function ensureBlockForNewItem(string $itemtype, array $input): void
+    public static function ensureBlockForNewItem(string $itemtype, array $input): ?int
     {
         global $DB;
 
         // Forced-id path (Zammad import etc.): never touch the counter.
         if (isset($input['id']) && (int) $input['id'] > 0) {
-            return;
+            return null;
         }
 
         if (!Settings::isSupported($itemtype) || !Settings::isEnabled($itemtype)) {
-            return;
+            return null;
         }
 
         $table = self::tableFor($itemtype);
         if ($table === null) {
-            return;
+            return null;
         }
 
         [$first, $last] = NumberPattern::blockRange(Settings::pattern($itemtype));
         if ($first <= 0) {
             // Plain counter pattern — GLPI's own numbering is what was asked for.
-            return;
+            return null;
         }
 
         if ($last > NumberPattern::MAX_ID) {
@@ -61,7 +71,7 @@ final class ItemNumberer
                 sprintf('%s number block %d..%d exceeds the maximum id %d.', $itemtype, $first, $last, NumberPattern::MAX_ID) . "\n"
             );
 
-            return;
+            return null;
         }
 
         $maxInBlock = self::maxIdInRange($table, $first, $last);
@@ -74,20 +84,35 @@ final class ItemNumberer
                 sprintf('%s number block %d..%d is exhausted.', $itemtype, $first, $last) . "\n"
             );
 
-            return;
+            return null;
         }
 
         if ($maxInBlock >= $first) {
             // Block already open — the counter is positioned correctly.
-            return;
+            return null;
         }
 
         // No item in this block yet: park the counter at the block start. This only
         // ever raises it (the prefix grows monotonically over time), so it is safe;
         // MySQL clamps to max(id)+1 if that were already higher.
-        $DB->doQuery(
-            sprintf('ALTER TABLE `%s` AUTO_INCREMENT = %d', $table, $first)
-        );
+        try {
+            $DB->doQuery(
+                sprintf('ALTER TABLE `%s` AUTO_INCREMENT = %d', $table, $first)
+            );
+
+            return null;
+        } catch (QueryException $e) {
+            Toolbox::logInFile(
+                'ticketnumbering',
+                sprintf('Raising the counter of %s failed: %s', $table, $e->getMessage()) . "\n"
+            );
+        } catch (RuntimeException) {
+            // DDL inside a transaction, refused by GLPI before it reached the server.
+        }
+
+        // Open the block with an explicit id instead. Like the counter, which MySQL
+        // never lowers below max(id)+1, leave it alone when a higher id already exists.
+        return self::maxId($table) >= $first ? null : $first;
     }
 
     /**

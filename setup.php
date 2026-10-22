@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Glpi\Cache\CacheManager;
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Ticketnumbering\Config\Settings;
 
@@ -11,7 +12,7 @@ if (!defined('GLPI_ROOT')) {
 
 require_once __DIR__ . '/hook.php';
 
-define('PLUGIN_TICKETNUMBERING_VERSION', '1.2.0');
+define('PLUGIN_TICKETNUMBERING_VERSION', '2.0.0');
 
 function plugin_version_ticketnumbering(): array
 {
@@ -23,8 +24,8 @@ function plugin_version_ticketnumbering(): array
         'homepage'     => 'https://github.com/glpiplugins/ticketnumbering',
         'requirements' => [
             'glpi' => [
-                'min' => '11.0.0',
-                'max' => '11.99.99',
+                'min' => '12.0.0',
+                'max' => '12.0.99',
             ],
         ],
     ];
@@ -35,8 +36,6 @@ function plugin_init_ticketnumbering(): void
     global $PLUGIN_HOOKS;
 
     plugin_ticketnumbering_register_autoloader();
-
-    $PLUGIN_HOOKS['csrf_compliant']['ticketnumbering'] = true;
 
     // Setup > Plugins > "Configure". Resolved to {root_doc}/plugins/ticketnumbering/config,
     // which is the route of GlpiPlugin\Ticketnumbering\Controller\ConfigController.
@@ -81,6 +80,19 @@ function plugin_ticketnumbering_uninstall(): bool
     Settings::uninstall();
 
     return true;
+}
+
+// The configuration page is a controller route. GLPI 12 does not rebuild its route
+// cache on (de)activation, so a cache built while the plugin was inactive would
+// answer /plugins/ticketnumbering/config with 404 until it is cleared.
+function plugin_ticketnumbering_activate(): void
+{
+    (new CacheManager())->resetAllCaches();
+}
+
+function plugin_ticketnumbering_deactivate(): void
+{
+    (new CacheManager())->resetAllCaches();
 }
 
 function plugin_ticketnumbering_register_autoloader(): void

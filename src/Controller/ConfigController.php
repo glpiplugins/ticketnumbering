@@ -25,8 +25,8 @@ use Symfony\Component\Routing\Attribute\Route;
  *
  * Authorization uses the core `config` right: the number format is a global
  * system setting, exactly the scope that right already describes.
- * CSRF protection for the POST is applied by GLPI's kernel CSRF listener; the
- * form carries the token through the `fields.csrfField()` macro.
+ * CSRF protection for the POST is applied by GLPI's kernel CSRF listener, which
+ * checks the browser's `Sec-Fetch-Site`/`Origin` headers; GLPI 12 has no tokens.
  */
 final class ConfigController extends AbstractController
 {
@@ -66,7 +66,7 @@ final class ConfigController extends AbstractController
                 'config',
                 'plugins',
             ],
-            'can_update'      => (bool) Session::haveRight('config', UPDATE),
+            'can_update'      => Session::haveRight('config', UPDATE),
             'has_errors'      => $errors !== [],
             'sections'        => self::sections($errors, $submitted),
             'placeholders'    => NumberPattern::placeholderHelp(),

@@ -2,7 +2,7 @@
 
 *English · [Deutsch](README.md)*
 
-GLPI 11 plugin that makes the **number of new tickets, problems and changes
+GLPI 12 plugin that makes the **number of new tickets, problems and changes
 freely configurable**. Instead of GLPI's continuous sequence, new items get a
 number following a pattern you define yourself, e.g. `260800001` for the first
 ticket in August 2026.
@@ -10,7 +10,7 @@ ticket in August 2026.
 **Every item type is configured separately** — its own switch, its own pattern,
 its own counter.
 
-- **GLPI version:** 11.0.0 – 11.99.99
+- **GLPI version:** 12.0.0 – 12.0.99 (GLPI 11 stays on version 1.2.0)
 - **License:** GPL-3.0-or-later
 - **Author:** Roy Brannath
 - **Repository:** https://github.com/glpiplugins/ticketnumbering
@@ -34,6 +34,12 @@ In GLPI the number **is** the primary key (`glpi_tickets.id`,
 plugin does not rewrite that id afterwards; instead it sets the
 `AUTO_INCREMENT` counter of the respective table to the start of the matching
 number block before an item is inserted (`pre_item_add` hook).
+
+When the item is created inside a database transaction, e.g. a ticket from a
+GLPI form, GLPI 12 refuses the `ALTER TABLE`, because it would commit the
+transaction early. The first item of a new block then gets the block start as
+an explicit id, and MySQL moves the counter behind it on its own. The result is
+the same.
 
 A pattern consists of three parts:
 
@@ -131,6 +137,10 @@ configuration from version 1.1.0 (keys `enabled`/`pattern`) is migrated to
 - **A pattern cannot take effect backwards.** If an item with an id higher than
   the block start already exists, MySQL cannot lower the counter; the
   configuration page points this out.
+- **Simultaneous block start inside transactions.** If two forms create the
+  first item of a new block at the same moment, one of them can fail on the
+  duplicate id and has to be submitted again. Outside transactions (user
+  interface, mail collector) this cannot happen.
 - **Full block.** Once every number of a block is used, GLPI assigns the next
   free id outside the pattern. The plugin logs this to
   `files/_log/ticketnumbering.log`; more `#` digits prevent it.
@@ -140,24 +150,27 @@ configuration from version 1.1.0 (keys `enabled`/`pattern`) is migrated to
 ## Installation
 
 ```bash
-docker exec -u www-data glpi-glpi-1 php bin/console plugin:install ticketnumbering
-docker exec -u www-data glpi-glpi-1 php bin/console plugin:activate ticketnumbering
+docker exec -u www-data glpi-app php bin/console plugin:install ticketnumbering
+docker exec -u www-data glpi-app php bin/console plugin:activate ticketnumbering
 ```
 
-Installation is idempotent and does not overwrite an existing configuration.
+Activating and deactivating clear GLPI's caches, so the route of the
+configuration page is available right away. Installation is idempotent and does not overwrite an existing configuration.
 Uninstalling removes only the plugin's own `glpi_configs` rows; tickets, problems
 and changes stay unchanged.
 
 ## Development
 
 ```bash
-# Unit tests (pure pattern logic, no database)
-docker exec -u www-data glpi-glpi-1 sh -lc \
-  'cd /var/www/glpi/plugins/ticketnumbering && php ../glpi-core/vendor/bin/phpunit -c phpunit.xml.dist'
+# Unit tests (pure pattern logic, no database) on PHP 8.5 in the GLPI 12 image;
+# PHPUnit comes from a GLPI checkout with dev dependencies (GLPI_CORE_DIR)
+docker run --rm --entrypoint php -u "$(id -u):$(id -g)" \
+  -v "$GLPI_CORE_DIR":/plugins/glpi-core:ro -v "$PWD":/plugins/ticketnumbering:ro \
+  -w /plugins/ticketnumbering glpi/glpi:12.0.0 \
+  /plugins/glpi-core/vendor/bin/phpunit -c phpunit.xml.dist --do-not-cache-result
 
-# Translations
-docker exec glpi-glpi-1 sh -lc \
-  'cd /var/www/glpi/plugins/ticketnumbering/locales && msgfmt -o de_DE.mo de_DE.po && msgfmt -o en_GB.mo en_GB.po'
+# Translations (needs gettext)
+cd locales && msgfmt -o de_DE.mo de_DE.po && msgfmt -o en_GB.mo en_GB.po
 ```
 
 ## Layout
@@ -166,9 +179,9 @@ docker exec glpi-glpi-1 sh -lc \
 setup.php                              lifecycle, hooks, config_page
 hook.php                               pre_item_add for Ticket, Problem, Change
 src/Config/Settings.php                per-item-type configuration in glpi_configs
-src/Controller/ConfigController.php    GLPI 11 controller /plugins/ticketnumbering/config
+src/Controller/ConfigController.php    GLPI 12 controller /plugins/ticketnumbering/config
 src/Service/NumberPattern.php          pattern: parser, validation, rendering (database-free)
-src/Service/ItemNumberer.php           setting AUTO_INCREMENT, status per item type
+src/Service/ItemNumberer.php           opening a block (AUTO_INCREMENT/explicit id), status per item type
 templates/pages/config.html.twig       configuration page
 public/js/config.js                    live preview, template buttons
 tests/Unit/NumberPatternTest.php       unit tests of the pattern logic
